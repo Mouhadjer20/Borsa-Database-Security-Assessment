@@ -1,0 +1,73 @@
+import { useAuth } from '../context/AuthContext.jsx';
+import { useLabStatus } from '../hooks/useLabStatus.js';
+
+export default function SettingsPage() {
+  const { user } = useAuth();
+  const { labStatus } = useLabStatus();
+
+  return (
+    <div className="space-y-6 max-w-4xl">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-100">Application Settings & Configuration</h1>
+        <p className="text-sm text-gray-400 mt-1">
+          System metadata and current session parameters. All credentials are isolated.
+        </p>
+      </div>
+
+      {/* User Session Info */}
+      <div className="card p-6 bg-gray-900 border border-gray-800 rounded-xl space-y-4">
+        <h3 className="text-base font-semibold text-gray-200 border-b border-gray-800 pb-3">
+          Authenticated Session
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <p className="text-xs text-gray-500">Username</p>
+            <p className="text-sm font-mono text-gray-200 mt-0.5">{user?.username || '—'}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">User ID</p>
+            <p className="text-sm font-mono text-gray-200 mt-0.5">{user?.user_id ?? '—'}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Assigned Role</p>
+            <p className="text-sm font-mono text-amber-400 mt-0.5 capitalize">{user?.role || 'customer'}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Security & Lab Mode */}
+      <div className="card p-6 bg-gray-900 border border-gray-800 rounded-xl space-y-4">
+        <h3 className="text-base font-semibold text-gray-200 border-b border-gray-800 pb-3">
+          Security Environment
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <p className="text-xs text-gray-500">Application Security Mode</p>
+            <p className="text-sm font-semibold text-gray-200 mt-0.5 uppercase">
+              {labStatus?.app_security_mode || 'secure'}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Laboratory Features</p>
+            <p className={`text-sm font-semibold mt-0.5 ${labStatus?.lab_enabled ? 'text-amber-400' : 'text-green-400'}`}>
+              {labStatus?.lab_enabled ? 'Active (Experimental)' : 'Disabled (Production Guard)'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Network & Infrastructure Overview */}
+      <div className="card p-6 bg-gray-900 border border-gray-800 rounded-xl space-y-4">
+        <h3 className="text-base font-semibold text-gray-200 border-b border-gray-800 pb-3">
+          VirtualBox Laboratory Architecture
+        </h3>
+        <div className="text-xs font-mono text-gray-400 space-y-2">
+          <p><strong className="text-gray-300">VM1 (Kali Linux):</strong> 192.168.100.10 (AUDIT-NET)</p>
+          <p><strong className="text-gray-300">VM2 (App Server):</strong> 192.168.100.20 (AUDIT-NET) & 192.168.200.20 (DB-NET)</p>
+          <p><strong className="text-gray-300">VM3 (Database Server):</strong> 192.168.200.30 (DB-NET only)</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+

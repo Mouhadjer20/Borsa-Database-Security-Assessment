@@ -1,0 +1,102 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+.conda/
+
+# Environment files — NEVER commit credentials
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vite / Frontend build
+application/frontend/dist/
+application/frontend/.vite/
+application/frontend/build/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Python testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+*.cover
+
+# Logs — keep directory structure, ignore log contents
+evidence/logs/*.log
+evidence/logs/*.txt
+evidence/screenshots/*.png
+evidence/screenshots/*.jpg
+evidence/experiment-results/*.json
+evidence/experiment-results/*.csv
+
+# Uvicorn / Gunicorn
+*.pid
+
+# SQLite (should not be used, but just in case)
+*.db
+*.sqlite3
+
+# Certificates and keys — NEVER commit
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+ssl/
+
+# Jupyter notebooks (if used for analysis)
+.ipynb_checkpoints/
+
+# macOS
+.AppleDouble
+.LSOverride
+Icon
+
+# Windows
+desktop.ini
+$RECYCLE.BIN/
+
+ToDo.txt

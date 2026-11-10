@@ -1,0 +1,128 @@
+/* Borsa — global styles */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply bg-gray-950 text-gray-100;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  body {
+    @apply min-h-screen;
+  }
+
+  /* Custom scrollbar for dark theme */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-950;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-700 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-600;
+  }
+
+  /* Focus ring override for dark theme */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-amber-500 ring-offset-2 ring-offset-gray-950;
+  }
+}
+
+@layer components {
+  /* Financial card base */
+  .card {
+    @apply bg-gray-800 border border-gray-700 rounded-xl shadow-card;
+  }
+
+  /* Primary button */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 
+           text-gray-950 font-semibold text-sm rounded-lg transition-colors duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Ghost/secondary button */
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600
+           text-gray-200 font-medium text-sm rounded-lg transition-colors duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Danger button */
+  .btn-danger {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500
+           text-white font-semibold text-sm rounded-lg transition-colors duration-150
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Form input */
+  .form-input {
+    @apply w-full px-4 py-2.5 bg-gray-800 border border-gray-600 rounded-lg
+           text-gray-100 placeholder-gray-500 text-sm
+           focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent
+           transition-colors duration-150;
+  }
+
+  /* Form label */
+  .form-label {
+    @apply block text-sm font-medium text-gray-300 mb-1.5;
+  }
+
+  /* Monospaced number display */
+  .num {
+    @apply font-mono tabular-nums;
+  }
+
+  /* Amount coloring */
+  .amount-positive { @apply text-green-400 num; }
+  .amount-negative { @apply text-red-400 num; }
+  .amount-neutral  { @apply text-gray-300 num; }
+
+  /* Section heading */
+  .section-title {
+    @apply text-lg font-semibold text-gray-100 mb-4;
+  }
+
+  /* Page title */
+  .page-title {
+    @apply text-2xl font-bold text-white;
+  }
+
+  /* Lab warning color scheme */
+  .lab-banner {
+    @apply bg-amber-950/40 border border-amber-700/60 rounded-xl;
+  }
+
+  /* Code block for experiment results */
+  .result-code {
+    @apply font-mono text-xs bg-gray-900 border border-gray-700 rounded-lg p-4
+           overflow-x-auto whitespace-pre-wrap break-words text-green-400 max-h-72;
+  }
+
+  /* Table styles */
+  .data-table {
+    @apply w-full text-sm;
+  }
+  .data-table thead tr {
+    @apply border-b border-gray-700;
+  }
+  .data-table th {
+    @apply px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider;
+  }
+  .data-table tbody tr {
+    @apply border-b border-gray-800 hover:bg-gray-800/50 transition-colors;
+  }
+  .data-table td {
+    @apply px-4 py-3 text-gray-300;
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+}

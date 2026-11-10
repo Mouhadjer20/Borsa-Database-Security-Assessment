@@ -1,0 +1,1040 @@
+# Project: Borsa — Educational Financial Web Application and Database Security Assessment
+
+## 1. Project Overview
+
+Develop a complete, functional full-stack web application named **Borsa**, designed as an educational financial platform for cybersecurity demonstrations, penetration testing exercises, and database security research.
+
+Borsa simulates a fictional financial institution. Authenticated users can access their personal financial dashboards, view account information, and interact with a realistic financial environment using synthetic data.
+
+The application serves two purposes:
+
+1. **Functional financial application:** Provide a professional financial dashboard with authentication, user-specific accounts, account balances, and financial information.
+2. **Cybersecurity research platform:** Provide a controlled environment for demonstrating, testing, measuring, and comparing common web application and database security vulnerabilities.
+
+The primary security research scenarios are:
+
+1. SQL Injection (SQLi).
+2. Excessive Database Privileges.
+3. Broken Authorization (BOLA/IDOR).
+4. Database Network Exposure.
+
+Additional research extensions include:
+
+- PostgreSQL Row-Level Security (RLS).
+- Authentication and session management weaknesses.
+- Vulnerability chaining.
+- Database auditing and security monitoring.
+- Comparison of application-level and database-level security controls.
+- Quantitative evaluation of security improvements.
+
+**Important:** This project is exclusively for educational purposes and authorized security testing. All vulnerable implementations must operate exclusively inside the isolated laboratory using synthetic financial data.
+
+---
+
+## 2. Technology Stack
+
+Use the following technologies. Do not replace them with Node.js, Express, MongoDB, or another database engine.
+
+### Frontend
+
+- React.js.
+- Vite.
+- Tailwind CSS.
+- JavaScript or TypeScript.
+- Axios or Fetch API for backend communication.
+- React Router for navigation.
+- Responsive dashboard design.
+
+### Backend
+
+- Python.
+- FastAPI.
+- REST API architecture.
+- Uvicorn as the ASGI server.
+- Pydantic for request and response validation.
+- SQLAlchemy 2 for database operations.
+- Psycopg 3 as the PostgreSQL driver.
+- Gunicorn/Uvicorn workers where appropriate.
+
+### Database
+
+- PostgreSQL 18.x.
+- Use the latest supported PostgreSQL 18.x minor release available at implementation.
+- Standard SQL wherever practical.
+- PostgreSQL-specific features when required.
+- Parameterized SQL queries.
+- PostgreSQL Row-Level Security.
+- Database roles and privileges.
+- Database auditing.
+
+### Infrastructure
+
+- VirtualBox.
+- Three dedicated Linux virtual machines.
+- Kali Linux for security auditing and penetration testing.
+- Linux application server.
+- Linux PostgreSQL server.
+
+---
+
+## 3. Virtual Laboratory Architecture
+
+Implement the application according to the following three-VM architecture.
+
+### VM 1 — Audit Workstation
+
+Operating system: Kali Linux.
+
+Responsibilities:
+
+- Authorized penetration testing.
+- Security assessment.
+- Manual vulnerability verification.
+- Automated security testing.
+- Network reconnaissance within the laboratory.
+- API security testing.
+- Evidence collection.
+- Security experiment execution.
+
+Suggested tools:
+
+- Burp Suite.
+- OWASP ZAP.
+- Nmap.
+- SQLMap.
+- curl.
+- Python security testing scripts.
+- PostgreSQL client tools.
+
+Network interface:
+
+- AUDIT-NET.
+
+### VM 2 — Application Server
+
+Operating system: Linux.
+
+Responsibilities:
+
+- Host the React frontend.
+- Host the FastAPI backend.
+- Manage authentication and sessions.
+- Handle API requests.
+- Connect to PostgreSQL.
+- Enforce application-level authorization.
+- Record application security events.
+- Provide secure and vulnerable experimental implementations.
+
+Technologies:
+
+- Python.
+- FastAPI.
+- React.
+- Tailwind CSS.
+- Uvicorn.
+- SQLAlchemy 2.
+- Psycopg 3.
+- Application logs.
+
+Network interfaces:
+
+- AUDIT-NET.
+- DB-NET.
+
+This VM is dual-homed and acts as the controlled communication point between the audit network and database network.
+
+### VM 3 — Database Server
+
+Operating system: Linux.
+
+Responsibilities:
+
+- Host PostgreSQL 18.x.
+- Store synthetic financial data.
+- Manage database identities.
+- Enforce database privileges.
+- Apply Row-Level Security policies.
+- Record database audit events.
+- Provide database-level security controls.
+
+Network interface:
+
+- DB-NET only.
+
+The database must not be directly accessible from unauthorized networks.
+
+### Network segmentation
+
+Create two separate isolated VirtualBox networks:
+
+**AUDIT-NET**
+- Contains Kali Linux and the application server.
+- Used for authorized security testing and application communication.
+
+**DB-NET**
+- Contains the application server and PostgreSQL server.
+- Used exclusively for application-to-database communication.
+
+The application server is the only intended communication bridge between these networks.
+
+Document:
+
+- VirtualBox network configuration.
+- VM IP addressing.
+- Static IP recommendations.
+- Firewall rules.
+- Allowed ports.
+- PostgreSQL listener configuration.
+- PostgreSQL client authentication rules.
+- Network connectivity tests.
+
+Never expose PostgreSQL directly to the audit workstation in the secured configuration.
+
+---
+
+## 4. Application Architecture
+
+Develop Borsa as a complete frontend/backend application.
+
+### Frontend responsibilities
+
+- Display the login interface.
+- Manage authentication state.
+- Communicate with FastAPI.
+- Display user-specific financial information.
+- Display account balances and transactions.
+- Provide navigation.
+- Display security laboratory information.
+- Show appropriate API errors and loading states.
+
+### Backend responsibilities
+
+- Authenticate users.
+- Manage sessions.
+- Validate incoming requests.
+- Enforce authorization.
+- Retrieve financial information.
+- Communicate with PostgreSQL.
+- Apply database access policies.
+- Record security events.
+- Provide controlled security experiment endpoints.
+
+The frontend must never communicate directly with PostgreSQL.
+
+All database operations must pass through the FastAPI backend.
+
+---
+
+## 5. Financial Database Model
+
+Borsa represents a fictional financial institution.
+
+The conceptual relational model includes the following entities:
+
+### customers
+
+- customer_id
+- full_name
+- email
+- status
+
+### bank_accounts
+
+- account_id
+- customer_id
+- account_type
+- balance
+- currency
+- status
+
+### transactions
+
+- transaction_id
+- source_account
+- destination_account
+- amount
+- timestamp
+- status
+
+### employees
+
+- employee_id
+- name
+- department
+- status
+
+### app_users
+
+- user_id
+- username
+- password_hash
+- role
+
+### security_audit
+
+- event_id
+- actor
+- action
+- resource
+- timestamp
+
+### access_policies
+
+- policy_id
+- role
+- resource
+- permission
+
+These entities represent the expected logical database model. Their actual schema and relationships must be verified against the existing PostgreSQL database before implementation.
+
+### Important database constraint
+
+The PostgreSQL database is already hosted on a separate server.
+
+**Do not create, initialize, reset, migrate, or modify the existing database schema.**
+
+Specifically:
+
+- Do not execute CREATE DATABASE.
+- Do not execute CREATE TABLE.
+- Do not execute ALTER TABLE.
+- Do not execute DROP TABLE.
+- Do not execute automatic schema migrations.
+- Do not delete existing records.
+- Do not initialize or overwrite existing database contents.
+- Do not assume that the conceptual database model is already implemented exactly as described.
+
+The application must connect to the existing database using environment-based configuration.
+
+First inspect and document the expected tables, columns, relationships, and database permissions required by the application.
+
+If an expected table or column does not exist, report the missing dependency and document the required change separately. Never modify the database automatically.
+
+The database administration and schema preparation process is outside the application's execution scope.
+
+---
+
+## 6. Database Identity and Privilege Management
+
+Clearly distinguish application users from PostgreSQL database roles.
+
+Use the following conceptual database identities:
+
+| PostgreSQL role | Purpose |
+|---|---|
+| db_owner | Database object ownership and controlled administration |
+| app_readonly | Read-only application operations |
+| app_writer | Limited application write operations |
+| app_vulnerable | Deliberately overprivileged experimental identity |
+| auditor | Authorized security inspection |
+| migration_role | Controlled schema migrations, outside normal application execution |
+
+Important requirements:
+
+- Never use PostgreSQL superuser credentials for normal application operations.
+- Never expose database credentials to the frontend.
+- Use least-privilege database access in Secure Mode.
+- Keep vulnerable database identities separate from secure application identities.
+- The overprivileged identity must not be an administrator or PostgreSQL superuser.
+- Document the permissions required by each identity.
+- Do not silently switch database identities between application requests.
+
+The vulnerable identity must only be used in the isolated training environment.
+
+---
+
+## 7. Synthetic Financial Data
+
+Use fictional customers and synthetic financial information.
+
+Prepare the application to support several different users:
+
+- Customer A: Owns account A.
+- Customer B: Owns account B.
+- Customer C: Owns account C.
+- Employee D: Has limited internal access.
+- Administrator E: Has explicitly defined administrative permissions.
+
+These identities are important for demonstrating broken authorization and database-level access controls.
+
+The application must never use real customer information or real financial records.
+
+---
+
+## 8. Authentication System
+
+Implement a complete authentication system.
+
+Required functionality:
+
+- User login.
+- User logout.
+- Authentication state persistence.
+- Session management.
+- Protected frontend routes.
+- User-specific dashboard access.
+- Server-side authentication verification.
+- Password verification.
+- Session expiration.
+- Appropriate error handling.
+
+### Login interface
+
+Include:
+
+- Username or email field.
+- Password field.
+- Login button.
+- Loading indicator.
+- Authentication error messages.
+
+### Authentication modes
+
+Implement two clearly separated security modes.
+
+#### A. Secure Mode
+
+This mode represents the correctly secured application.
+
+Requirements:
+
+- Secure password hashing and verification.
+- Parameterized SQL queries.
+- Secure session management.
+- HTTP-only session cookies where applicable.
+- Appropriate SameSite and Secure cookie settings.
+- CSRF protection where required.
+- Input validation.
+- Server-side authorization.
+- Least-privilege database identities.
+- Secure error handling.
+- Session expiration and logout invalidation.
+
+#### B. Vulnerable Lab Mode
+
+This mode provides intentionally vulnerable demonstrations.
+
+It should support controlled demonstrations of:
+
+- SQL Injection.
+- Authentication bypass.
+- Weak authentication logic.
+- Session management weaknesses.
+- Excessive database privileges.
+- Broken authorization.
+
+Keep vulnerable implementations separate from secure implementations.
+
+Do not implement automatic fallback from Secure Mode to Vulnerable Lab Mode.
+
+Vulnerable functionality must require explicit laboratory configuration and must never be enabled in production.
+
+Use an explicitly configured isolated training database containing synthetic data.
+
+The application must refuse to start vulnerable functionality when its required laboratory configuration is missing or invalid.
+
+Do not allow vulnerable code to connect to real financial databases or production services.
+
+---
+
+## 9. User Financial Dashboard
+
+After successful authentication, redirect users to their personal dashboard.
+
+The dashboard should display:
+
+- Welcome message.
+- Username.
+- User ID.
+- Account information.
+- Account balance.
+- Account currency.
+- Account status.
+- Recent transactions.
+- Logout button.
+
+The balance and financial information must be retrieved dynamically from PostgreSQL through the FastAPI backend.
+
+Do not use hardcoded financial values or static mock data as a replacement for database integration.
+
+In Secure Mode:
+
+- Users must only see accounts belonging to their authenticated customer identity.
+- Users must not access another customer's transactions.
+- Authorization must be checked on the backend.
+- Database-level protection should also be evaluated through PostgreSQL RLS.
+
+The frontend must not be trusted to enforce authorization.
+
+---
+
+## 10. Security Laboratory Interface
+
+Create a dedicated Security Lab section inside the Borsa application.
+
+The interface should help users understand the differences between vulnerable and secured implementations.
+
+Include:
+
+### Laboratory overview
+
+- Current application security mode.
+- Database connection status.
+- Active database identity, where safely available.
+- Current experiment.
+- Security configuration summary.
+
+### Experiment sections
+
+1. SQL Injection.
+2. Excessive Database Privileges.
+3. Broken Authorization.
+4. Database Network Exposure.
+
+Each section should include:
+
+- Research objective.
+- Vulnerability explanation.
+- Experimental configuration.
+- Vulnerable implementation description.
+- Secure implementation description.
+- Expected security behavior.
+- Test results.
+- Evidence and log references.
+- Remediation explanation.
+
+Where practical, provide a comparison between vulnerable and secured results.
+
+The laboratory interface must not pretend that an experiment succeeded when it has not actually been executed.
+
+Display real results returned by the backend.
+
+---
+
+## 11. Four Primary Security Experiments
+
+The application must support the following controlled research scenarios.
+
+### Scenario 1 — SQL Injection
+
+Research objective:
+
+Determine whether unsafe SQL query construction allows an attacker to manipulate the application's intended database operations.
+
+Experimental variants:
+
+- Variant A: Unsafe SQL string construction.
+- Variant B: Parameterized SQL queries.
+
+Defensive measures:
+
+- Prepared statements.
+- Parameterized queries.
+- Safe database access patterns.
+- Restricted application database identity.
+- Input validation as supplementary protection.
+
+Measurements:
+
+- Unauthorized records accessed.
+- Whether SQL query semantics were manipulated.
+- Database role used.
+- Corresponding application logs.
+- Corresponding database logs.
+- Whether the same test succeeds after remediation.
+
+### Scenario 2 — Excessive Database Privileges
+
+Research objective:
+
+Determine whether an application database identity can perform operations beyond its assigned responsibilities.
+
+Experimental variants:
+
+- Variant A: Excessively privileged experimental account.
+- Variant B: Least-privileged application account.
+
+Defensive measures:
+
+- Role separation.
+- Explicit GRANT and REVOKE permissions.
+- Restricted ownership.
+- Separation of runtime and migration identities.
+- PostgreSQL privilege auditing.
+
+Measurements:
+
+- Number of permitted operations.
+- Unauthorized operations attempted.
+- Unauthorized operations successfully performed.
+- Difference between privilege configurations.
+
+### Scenario 3 — Broken Authorization
+
+Research objective:
+
+Determine whether one customer can access another customer's financial resources.
+
+Experimental variants:
+
+- Variant A: Missing or incorrect ownership checks.
+- Variant B: Correct server-side authorization.
+- Variant C: PostgreSQL Row-Level Security.
+
+Compare:
+
+- Application-enforced access control.
+- Database-enforced row-level access control.
+- Combined application and database enforcement.
+
+Important RLS considerations:
+
+- Establish the correct database identity or trusted session context.
+- Prevent users from manipulating authorization context.
+- Ensure application connection pooling does not leak session-specific security state.
+- Test both read and write operations.
+- Verify RLS behavior using the actual application database roles.
+
+Measurements:
+
+- Cross-customer access attempts.
+- Unauthorized records returned.
+- Unauthorized modifications.
+- Enforcement behavior at the application layer.
+- Enforcement behavior at the database layer.
+
+### Scenario 4 — Database Network Exposure
+
+Research objective:
+
+Determine whether PostgreSQL accepts connections from unauthorized network locations.
+
+Experimental variants:
+
+- Variant A: Database access restricted to the application VM.
+- Variant B: Database unnecessarily exposed to the audit network.
+
+Defensive measures:
+
+- Network segmentation.
+- Host firewall.
+- PostgreSQL listener restrictions.
+- PostgreSQL client authentication rules.
+- TLS for database connections.
+
+Measurements:
+
+- Port accessibility.
+- Connection success or failure.
+- Source network.
+- Authentication outcome.
+- Evidence of permitted and denied connections.
+
+Only perform network exposure experiments within the isolated VirtualBox laboratory.
+
+---
+
+## 12. Vulnerability Chaining
+
+Support an additional experimental investigation of how multiple weaknesses can combine.
+
+Illustrative attack chain:
+
+1. Initial access through an application weakness.
+2. SQL Injection.
+3. Access through an excessively privileged database identity.
+4. Unauthorized access to synthetic financial records.
+5. Evidence collection and impact assessment.
+
+Treat this as a conceptual attack path until each stage has been independently validated.
+
+The research must answer:
+
+- Does SQL Injection alone expose data?
+- Does excessive privilege alone create unauthorized capabilities?
+- Does combining both increase the demonstrated impact?
+- Which individual defensive control breaks the chain?
+- Do multiple defensive controls provide additional protection?
+
+Record each experiment independently before combining vulnerabilities.
+
+---
+
+## 13. External PostgreSQL Integration
+
+The database is hosted on the separate PostgreSQL VM.
+
+Implement:
+
+- Configurable external PostgreSQL connectivity.
+- Connection pooling.
+- Connection error handling.
+- Secure credential management.
+- Database connection health checks.
+- Connection timeout handling.
+- Proper resource cleanup.
+- Environment-based configuration.
+
+Example `.env.example`:
+
+    APP_ENV=development
+    APP_SECURITY_MODE=secure
+
+    APP_HOST=0.0.0.0
+    APP_PORT=8000
+
+    DB_HOST=
+    DB_PORT=5432
+    DB_NAME=
+    DB_USER=
+    DB_PASSWORD=
+
+    DB_SSLMODE=require
+
+    SESSION_SECRET=
+    SESSION_COOKIE_SECURE=true
+    SESSION_COOKIE_HTTPONLY=true
+    SESSION_COOKIE_SAMESITE=lax
+
+    CORS_ORIGINS=
+
+    LAB_ENABLED=false
+    LAB_DB_HOST=
+    LAB_DB_PORT=5432
+    LAB_DB_NAME=
+    LAB_DB_USER=
+    LAB_DB_PASSWORD=
+
+Adapt configuration to the final implementation.
+
+Requirements:
+
+- Never commit real credentials.
+- Never expose database credentials through API responses.
+- Never expose connection strings to React.
+- Validate vulnerable laboratory configuration at startup.
+- Use separate database configurations for secure and vulnerable experiments.
+- Do not silently connect to the wrong database.
+- Use TLS where supported.
+- Restrict database connectivity using firewall rules and PostgreSQL configuration.
+
+---
+
+## 14. Application Logging and Security Auditing
+
+Implement application-level and database-level logging.
+
+Application logs should record:
+
+- Login attempts.
+- Successful authentication.
+- Failed authentication.
+- Logout events.
+- Authorization failures.
+- Suspicious requests.
+- Laboratory experiment execution.
+- Database connection errors.
+- Security mode changes.
+
+Database auditing should support recording:
+
+- Database identity.
+- Executed operation.
+- Accessed resource.
+- Timestamp.
+- Relevant authorization outcome.
+
+Do not log passwords, session secrets, authentication tokens, or complete sensitive financial information.
+
+Use structured logs where practical.
+
+Provide a way to associate application events with corresponding database audit events during experiments.
+
+---
+
+## 15. User Interface and Design
+
+Create a professional financial dashboard with a modern cybersecurity-oriented visual identity.
+
+Application name: **Borsa**.
+
+Design requirements:
+
+- Dark-themed interface.
+- Professional typography.
+- Clean and minimal design.
+- Responsive layout.
+- Sidebar navigation.
+- Financial dashboard overview.
+- Clear account information.
+- Security Lab section.
+- User account section.
+- Consistent loading and error states.
+
+Suggested navigation:
+
+- Dashboard.
+- My Account.
+- Transactions.
+- Security Lab.
+- Security Experiments.
+- Settings.
+- Logout.
+
+The dashboard should look like a realistic financial platform rather than a generic cybersecurity administration panel.
+
+Keep the Security Lab visually distinct from normal financial functionality.
+
+---
+
+## 16. Project Structure
+
+Organize the project using a clean modular architecture.
+
+Suggested structure:
+
+    Borsa-Database-Security-Assessment/
+    |
+    |-- README.md
+    |
+    |-- documentation/
+    |   |-- 01-project-charter.md
+    |   |-- 02-research-questions.md
+    |   |-- 03-scope-and-rules-of-engagement.md
+    |   |-- 04-architecture.md
+    |   |-- 05-threat-model.md
+    |   |-- 06-database-design.md
+    |   |-- 07-methodology.md
+    |   |-- 08-security-experiments.md
+    |   |-- 09-results-and-analysis.md
+    |   |-- 10-final-report.md
+    |
+    |-- infrastructure/
+    |   |-- vm-specifications/
+    |   |-- network-topology/
+    |   |-- firewall/
+    |   |-- database-configuration/
+    |
+    |-- database/
+    |   |-- schema-reference/
+    |   |-- roles/
+    |   |-- policies/
+    |   |-- audit/
+    |   |-- documentation/
+    |
+    |-- application/
+    |   |-- backend/
+    |   |   |-- app/
+    |   |   |   |-- api/
+    |   |   |   |-- core/
+    |   |   |   |-- models/
+    |   |   |   |-- schemas/
+    |   |   |   |-- services/
+    |   |   |   |-- repositories/
+    |   |   |   |-- middleware/
+    |   |   |   |-- security/
+    |   |   |   |-- database/
+    |   |   |   |-- lab/
+    |   |   |   |-- main.py
+    |   |   |-- tests/
+    |   |   |-- requirements.txt
+    |   |   |-- .env.example
+    |   |
+    |   |-- frontend/
+    |       |-- src/
+    |       |   |-- components/
+    |       |   |-- pages/
+    |       |   |-- layouts/
+    |       |   |-- services/
+    |       |   |-- hooks/
+    |       |   |-- context/
+    |       |   |-- routes/
+    |       |   |-- styles/
+    |       |   |-- App.jsx
+    |       |   |-- main.jsx
+    |       |-- package.json
+    |
+    |-- tests/
+    |   |-- integration/
+    |   |-- security/
+    |   |-- api/
+    |   |-- regression/
+    |
+    |-- evidence/
+    |   |-- screenshots/
+    |   |-- logs/
+    |   |-- experiment-results/
+    |
+    |-- .gitignore
+
+Adjust the structure when necessary, but preserve the separation between frontend, backend, database documentation, infrastructure, testing, and security research.
+
+---
+
+## 17. Security Requirements
+
+Implement the following security requirements:
+
+### Application security
+
+- Input validation.
+- Parameterized SQL queries in Secure Mode.
+- Secure password hashing.
+- Secure session management.
+- Server-side authorization.
+- Protected API endpoints.
+- Appropriate CORS configuration.
+- CSRF protection where applicable.
+- Secure error handling.
+- No sensitive information in frontend code.
+
+### Database security
+
+- Least-privilege database identities.
+- Role separation.
+- PostgreSQL RLS where applicable.
+- Database auditing.
+- TLS connections.
+- Restricted database network access.
+- No normal application access using PostgreSQL superuser credentials.
+
+### Laboratory isolation
+
+- Vulnerable implementations must be isolated.
+- Synthetic data only.
+- No production database connections.
+- No accidental exposure of vulnerable endpoints.
+- Explicit laboratory activation.
+- Clear separation between Secure Mode and Vulnerable Lab Mode.
+- Documented snapshots before experiments.
+- Repeatable experiment configurations.
+
+### Deployment security
+
+- HTTPS in deployment.
+- Environment-based secrets.
+- Secure cookies.
+- Firewall restrictions.
+- Proper application configuration.
+- No hardcoded credentials.
+
+---
+
+## 18. Research Methodology and Evaluation
+
+The application must support a controlled before-and-after experimental methodology.
+
+For every primary scenario:
+
+1. Document the research objective.
+2. Define the vulnerable configuration.
+3. Execute the authorized test.
+4. Record observations.
+5. Collect application and database evidence.
+6. Apply defensive controls.
+7. Repeat the same test.
+8. Compare the results.
+9. Explain the security improvement.
+10. Document limitations.
+
+Use the following research classifications and frameworks where relevant:
+
+- MITRE ATT&CK for observed attack techniques.
+- CWE and CAPEC for weakness and attack-pattern classification.
+- CVSS 4.0 for independently justified severity assessment.
+- OWASP guidance for application security.
+- NIST guidance for security assessment methodology.
+
+Do not invent experimental results, CVSS scores, or successful attacks.
+
+Clearly distinguish expected results from experimentally observed results.
+
+---
+
+## 19. Expected Deliverables
+
+Generate a complete, functional application rather than a static mockup.
+
+Deliver:
+
+1. React frontend.
+2. FastAPI backend.
+3. PostgreSQL external database integration.
+4. Login and logout functionality.
+5. Session management.
+6. User-specific financial dashboard.
+7. Dynamic account balance retrieval.
+8. Account and transaction information.
+9. Security Lab interface.
+10. Secure Mode.
+11. Vulnerable Lab Mode.
+12. Four primary security experiment implementations.
+13. PostgreSQL RLS integration and evaluation support.
+14. Database role and privilege documentation.
+15. Application and database logging.
+16. Environment configuration example.
+17. API documentation.
+18. Installation instructions.
+19. Deployment instructions for the three VMs.
+20. Network and firewall configuration documentation.
+21. Testing instructions.
+22. Security experiment documentation.
+23. README with architecture and usage instructions.
+
+---
+
+## 20. Development Instructions
+
+Follow these implementation principles:
+
+**First: Inspect before implementing.**
+
+Understand the existing PostgreSQL database structure and the target deployment environment before writing database integration code.
+
+Do not assume the database schema or modify it.
+
+**Second: Build the functional application.**
+
+Implement frontend/backend communication, authentication, database integration, and the financial dashboard.
+
+**Third: Implement Secure Mode first.**
+
+Ensure the normal financial application uses secure authentication, parameterized queries, least-privilege access, and server-side authorization.
+
+**Fourth: Implement Vulnerable Lab Mode separately.**
+
+Create isolated experimental implementations for the four research scenarios.
+
+**Fifth: Implement the Security Lab interface.**
+
+Display actual experiment configurations, execution status, evidence, and results.
+
+**Sixth: Test everything.**
+
+Verify frontend functionality, backend APIs, database connectivity, authorization, and security controls.
+
+**Seventh: Document all important implementation decisions.**
+
+Explain where configuration changes are required, how to execute experiments, and how to maintain the project.
+
+### Additional implementation rules
+
+- Do not create fake functionality or non-working buttons.
+- Do not replace real database integration with hardcoded mock data.
+- Do not invent database tables or columns.
+- Do not automatically modify the existing database.
+- Do not mix vulnerable and secure code paths.
+- Do not expose sensitive information.
+- Keep the code modular and maintainable.
+- Handle errors properly.
+- Include meaningful comments for security-critical logic.
+- Include unit and integration tests.
+- Explain all required environment variables.
+- Document any assumptions or missing dependencies.
+- If a requested feature cannot be implemented because of an external dependency, explain exactly what is missing rather than silently simulating it.
+
+**Final objective:**
+
+Build Borsa as a professional, functional financial web application and a reproducible cybersecurity research platform.
+
+The result must combine a realistic user experience with a technically rigorous database security assessment environment, allowing researchers to demonstrate vulnerabilities, apply defensive controls, collect evidence, and quantitatively evaluate security improvements within an isolated three-VM laboratory.
