@@ -1,0 +1,50 @@
+# =============================================================================
+# BorsaTrust — Systemd Service Unit (FastAPI Backend)
+# =============================================================================
+# Installed to: /etc/systemd/system/borsa-backend.service
+# Placeholders __APP_DIR__ and __APP_PORT__ are replaced by setup.sh
+# =============================================================================
+
+[Unit]
+Description=BorsaTrust FastAPI Backend
+Documentation=https://github.com/borsa-ctf
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=borsa
+Group=borsa
+WorkingDirectory=__APP_DIR__/application/backend
+
+# Load .env from the backend directory
+EnvironmentFile=__APP_DIR__/application/backend/.env
+
+# Uvicorn with 2 workers; bind to localhost only (Nginx proxies externally)
+ExecStart=__APP_DIR__/.venv/bin/uvicorn app.main:app \
+    --host 127.0.0.1 \
+    --port __APP_PORT__ \
+    --workers 2 \
+    --log-level info \
+    --access-log
+
+# Graceful shutdown
+ExecStop=/bin/kill -s SIGTERM $MAINPID
+TimeoutStopSec=15
+
+# Automatic restart on failure
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=__APP_DIR__/application/backend
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
+
