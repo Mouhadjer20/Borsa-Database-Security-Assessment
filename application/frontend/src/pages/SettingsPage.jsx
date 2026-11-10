@@ -1,9 +1,7 @@
 import { useAuth } from '../context/AuthContext.jsx';
-import { useLabStatus } from '../hooks/useLabStatus.js';
 
 export default function SettingsPage() {
   const { user } = useAuth();
-  const { labStatus } = useLabStatus();
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -35,7 +33,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Security & Lab Mode */}
+      {/* Environment Info */}
       <div className="card p-6 bg-gray-900 border border-gray-800 rounded-xl space-y-4">
         <h3 className="text-base font-semibold text-gray-200 border-b border-gray-800 pb-3">
           Security Environment
@@ -43,14 +41,14 @@ export default function SettingsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <p className="text-xs text-gray-500">Application Security Mode</p>
-            <p className="text-sm font-semibold text-gray-200 mt-0.5 uppercase">
-              {labStatus?.app_security_mode || 'secure'}
+            <p className="text-sm font-semibold text-green-400 mt-0.5 uppercase">
+              Secure
             </p>
           </div>
           <div>
-            <p className="text-xs text-gray-500">Laboratory Features</p>
-            <p className={`text-sm font-semibold mt-0.5 ${labStatus?.lab_enabled ? 'text-amber-400' : 'text-green-400'}`}>
-              {labStatus?.lab_enabled ? 'Active (Experimental)' : 'Disabled (Production Guard)'}
+            <p className="text-xs text-gray-500">Environment</p>
+            <p className="text-sm font-semibold text-gray-200 mt-0.5">
+              Internal Assessment Platform
             </p>
           </div>
         </div>

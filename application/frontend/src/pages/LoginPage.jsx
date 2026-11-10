@@ -57,7 +57,7 @@ export default function LoginPage() {
           BORSA
         </h2>
         <p className="mt-2 text-xs font-mono text-amber-500 uppercase tracking-widest">
-          Financial Institution & Security Lab
+          Financial Institution Platform
         </p>
       </div>
 

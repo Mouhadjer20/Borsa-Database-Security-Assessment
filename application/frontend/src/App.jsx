@@ -9,8 +9,7 @@ import DashboardPage    from './pages/DashboardPage.jsx';
 import AccountsPage     from './pages/AccountsPage.jsx';
 import AccountDetailPage from './pages/AccountDetailPage.jsx';
 import TransactionsPage from './pages/TransactionsPage.jsx';
-import SecurityLabPage  from './pages/SecurityLabPage.jsx';
-import ExperimentsPage  from './pages/ExperimentsPage.jsx';
+import DiagnosticsPage  from './pages/DiagnosticsPage.jsx';
 import SettingsPage     from './pages/SettingsPage.jsx';
 import NotFoundPage     from './pages/NotFoundPage.jsx';
 
@@ -32,8 +31,7 @@ export default function App() {
               <Route path="/accounts"               element={<AccountsPage />} />
               <Route path="/accounts/:accountId"    element={<AccountDetailPage />} />
               <Route path="/transactions"           element={<TransactionsPage />} />
-              <Route path="/security-lab"           element={<SecurityLabPage />} />
-              <Route path="/experiments"            element={<ExperimentsPage />} />
+              <Route path="/diagnostics"            element={<DiagnosticsPage />} />
               <Route path="/settings"               element={<SettingsPage />} />
             </Route>
           </Route>

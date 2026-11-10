@@ -35,30 +35,15 @@ const NAV_ITEMS = [
       </svg>
     ),
   },
-];
-
-const LAB_NAV_ITEMS = [
   {
-    to: '/security-lab',
-    label: 'Security Lab',
+    to: '/diagnostics',
+    label: 'Diagnostics',
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
         <path strokeLinecap="round" strokeLinejoin="round"
-          d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+          d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25z" />
       </svg>
     ),
-    lab: true,
-  },
-  {
-    to: '/experiments',
-    label: 'Experiments',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round"
-          d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15M14.25 3.104c.251.023.501.05.75.082M19.8 15a2.25 2.25 0 01-.659 1.591l-1.591 1.591M19.8 15H5.2M5.2 15a2.25 2.25 0 00-.659 1.591L2.95 18.182" />
-      </svg>
-    ),
-    lab: true,
   },
 ];
 
@@ -79,19 +64,15 @@ const BOTTOM_NAV_ITEMS = [
 // ---------------------------------------------------------------------------
 // NavItem component
 // ---------------------------------------------------------------------------
-function NavItem({ to, label, icon, lab = false }) {
+function NavItem({ to, label, icon }) {
   return (
     <NavLink
       to={to}
       className={({ isActive }) =>
         `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group
         ${isActive
-          ? lab
-            ? 'bg-amber-950/60 text-amber-300 border border-amber-700/40'
-            : 'bg-gray-800 text-amber-400 border border-gray-700'
-          : lab
-            ? 'text-amber-500/70 hover:bg-amber-950/30 hover:text-amber-400'
-            : 'text-gray-400 hover:bg-gray-800/60 hover:text-gray-200'
+          ? 'bg-gray-800 text-amber-400 border border-gray-700'
+          : 'text-gray-400 hover:bg-gray-800/60 hover:text-gray-200'
         }`
       }
     >
@@ -140,19 +121,6 @@ export default function Sidebar() {
 
         {/* Primary nav */}
         {NAV_ITEMS.map((item) => (
-          <NavItem key={item.to} {...item} />
-        ))}
-
-        {/* Lab section divider */}
-        <div className="pt-4 pb-2">
-          <div className="flex items-center gap-2 px-3 mb-2">
-            <div className="flex-1 h-px bg-gray-800" />
-            <span className="text-xs font-semibold text-amber-600/70 uppercase tracking-widest">Lab</span>
-            <div className="flex-1 h-px bg-gray-800" />
-          </div>
-        </div>
-
-        {LAB_NAV_ITEMS.map((item) => (
           <NavItem key={item.to} {...item} />
         ))}
 

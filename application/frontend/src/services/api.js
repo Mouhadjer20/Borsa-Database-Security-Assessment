@@ -89,22 +89,30 @@ export async function getTransactions(params = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// Security Lab
+// Diagnostics
 // ---------------------------------------------------------------------------
 
-/** GET /api/lab/status — current lab/security mode status */
-export async function getLabStatus() {
-  const res = await apiClient.get('/api/lab/status');
+/** GET /api/auth/search?q= — search users by name/username */
+export async function searchUsers(q) {
+  const res = await apiClient.get('/api/auth/search', { params: { q } });
   return res.data;
 }
 
-/**
- * POST /api/lab/experiments/:experimentId/run — execute an experiment.
- * @param {string} experimentId
- * @param {Object} payload - experiment-specific parameters
- */
-export async function runExperiment(experimentId, payload = {}) {
-  const res = await apiClient.post(`/api/lab/experiments/${experimentId}/run`, payload);
+/** GET /api/accounts/lookup/:ref — look up account by reference */
+export async function lookupAccount(accountRef) {
+  const res = await apiClient.get(`/api/accounts/lookup/${accountRef}`);
+  return res.data;
+}
+
+/** GET /api/transactions/export — export transactions with metadata */
+export async function exportTransactions(params = {}) {
+  const res = await apiClient.get('/api/transactions/export', { params });
+  return res.data;
+}
+
+/** GET /api/diagnostics/db-ping — check database connectivity */
+export async function dbPing(host, port) {
+  const res = await apiClient.get('/api/diagnostics/db-ping', { params: { host, port } });
   return res.data;
 }
 

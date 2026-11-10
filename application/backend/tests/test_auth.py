@@ -1,7 +1,7 @@
 """
-application/backend/tests/test_auth.py
-======================================
-Unit and API tests for authentication endpoints and security functions.
+tests/test_auth.py
+==================
+Unit tests for authentication and security functions.
 """
 
 import pytest
@@ -30,6 +30,7 @@ def test_jwt_creation_and_decoding():
         expires_minutes=15,
     )
     assert token is not None
+
     payload = decode_access_token(token)
     assert payload is not None
     assert payload.get("sub") == "alice"
@@ -45,4 +46,3 @@ def test_jwt_creation_and_decoding():
 def test_invalid_token_handling():
     assert extract_user_from_token("invalid.token.signature") is None
     assert decode_access_token("garbage_token") is None
-

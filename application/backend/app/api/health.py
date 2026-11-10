@@ -2,8 +2,8 @@
 app/api/health.py
 =================
 Health check endpoint for Borsa.
-Reports server status, security mode, and database connectivity.
-Credentials and database connection details are never exposed.
+Reports server status and database connectivity.
+Credentials and internal configuration details are never exposed.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ async def health_check() -> Dict[str, Any]:
     Check the operational status of the backend API and database.
     """
     settings = get_settings()
-    db_status = "unhealthy"
+    db_status = "unavailable"
 
     try:
         engine = get_secure_engine()
@@ -38,8 +38,5 @@ async def health_check() -> Dict[str, Any]:
     return {
         "status": "healthy" if db_status == "healthy" else "degraded",
         "app_env": settings.app_env,
-        "app_security_mode": settings.app_security_mode,
-        "lab_enabled": settings.lab_enabled,
         "database_status": db_status,
     }
-

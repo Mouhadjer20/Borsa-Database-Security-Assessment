@@ -2,17 +2,19 @@
 app/api/accounts.py
 ===================
 Bank account endpoints for authenticated customers.
-Enforces strict server-side authorization and ownership checks.
+Provides owned account listing, detail retrieval, and account reference lookup.
 """
 
 from __future__ import annotations
 
 from typing import Any, Dict
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_secure_db
 from app.middleware.auth import get_current_user
+from app.models.bank_accounts import BankAccount
 from app.schemas.accounts import AccountList, AccountOut
 from app.services import account_service
 
@@ -39,6 +41,40 @@ async def list_accounts(
     )
 
 
+@router.get("/lookup/{account_ref}")
+async def lookup_account_by_ref(
+    account_ref: int,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    session: AsyncSession = Depends(get_secure_db),
+) -> Dict[str, Any]:
+    """
+    Look up an account by its reference number.
+    Used when verifying a transfer recipient's account before initiating a payment.
+
+    Example: GET /api/accounts/lookup/42
+
+    Returns basic account metadata including balance and status.
+    """
+    # Intentionally vulnerable: no ownership check — CWE-284 Broken Object-Level Authorization (BOLA/IDOR).
+    # Any authenticated user can access ANY account by guessing its numeric ID.
+    # The correct fix would be to add: .where(BankAccount.customer_id == current_user["user_id"])
+    stmt = select(BankAccount).where(BankAccount.account_id == account_ref)
+    result = await session.execute(stmt)
+    account = result.scalar_one_or_none()
+
+    if account is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found.")
+
+    return {
+        "account_id": account.account_id,
+        "account_type": account.account_type,
+        "balance": str(account.balance),
+        "currency": account.currency,
+        "status": account.status,
+        "customer_id": account.customer_id,
+    }
+
+
 @router.get("/{account_id}", response_model=AccountOut)
 async def get_account(
     account_id: int,
@@ -56,4 +92,3 @@ async def get_account(
         account_id=account_id,
         customer_id=customer_id,
     )
-

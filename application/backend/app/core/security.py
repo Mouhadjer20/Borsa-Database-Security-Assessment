@@ -15,6 +15,23 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import bcrypt
+# Passlib compatibility shim for bcrypt >= 4.0.0
+if not hasattr(bcrypt, "__about__"):
+    bcrypt.__about__ = type("About", (), {"__version__": getattr(bcrypt, "__version__", "4.0.0")})()
+
+import passlib.handlers.bcrypt as _pb
+_orig_calc_checksum = getattr(_pb._BcryptBackend, "_calc_checksum", None)
+def _patched_calc_checksum(self, secret):
+    secret, ident = self._prepare_digest_args(secret)
+    config = self._get_config(ident)
+    if isinstance(config, str):
+        config = config.encode("ascii")
+    # bcrypt >= 4.1.0 raises if secret > 72 bytes; truncate safely to 72 bytes
+    h = bcrypt.hashpw(secret[:72], config)
+    return h[-31:].decode("ascii")
+_pb._BcryptBackend._calc_checksum = _patched_calc_checksum
+
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
@@ -69,25 +86,34 @@ def create_access_token(
     username: str,
     role: str,
     expires_delta: timedelta | None = None,
+    expires_minutes: int | None = None,
 ) -> str:
     """
     Create a signed JWT access token.
 
     The payload contains only the minimum necessary claims:
-      sub   — user_id (string, as per JWT spec)
-      uname — username (for display, not for auth lookups)
+      sub   — username / user identifier
+      user_id — numeric identifier
+      uname — username (for display)
       role  — user role for coarse route-level guards
       exp   — expiry timestamp
 
     Sensitive data (passwords, full account records) is NEVER embedded in tokens.
     """
     settings = get_settings()
-    expire = datetime.now(timezone.utc) + (
-        expires_delta or timedelta(minutes=settings.access_token_expire_minutes)
-    )
+    if expires_minutes is not None:
+        delta = timedelta(minutes=expires_minutes)
+    elif expires_delta is not None:
+        delta = expires_delta
+    else:
+        delta = timedelta(minutes=settings.access_token_expire_minutes)
+
+    expire = datetime.now(timezone.utc) + delta
     payload: dict[str, Any] = {
-        "sub": str(user_id),
+        "sub": username,
+        "user_id": user_id,
         "uname": username,
+        "username": username,
         "role": role,
         "exp": expire,
         "iat": datetime.now(timezone.utc),
@@ -95,17 +121,16 @@ def create_access_token(
     return jwt.encode(payload, _secret(), algorithm=_ALGORITHM)
 
 
-def decode_access_token(token: str) -> dict[str, Any]:
+def decode_access_token(token: str) -> dict[str, Any] | None:
     """
     Decode and verify a JWT token.
 
-    Raises
-    ------
-    JWTError
-        When the token is invalid, expired, or the signature does not match.
-        Callers should catch JWTError and return HTTP 401.
+    Returns the payload dictionary if valid, or None if invalid/expired.
     """
-    return jwt.decode(token, _secret(), algorithms=[_ALGORITHM])
+    try:
+        return jwt.decode(token, _secret(), algorithms=[_ALGORITHM])
+    except JWTError:
+        return None
 
 
 def extract_user_from_token(token: str) -> dict[str, Any] | None:
@@ -116,12 +141,24 @@ def extract_user_from_token(token: str) -> dict[str, Any] | None:
     """
     try:
         payload = decode_access_token(token)
-        user_id_str = payload.get("sub")
-        if user_id_str is None:
+        if not payload:
+            log_security_event(
+                "token_decode_failure",
+                outcome="failure",
+                reason="invalid_or_expired_token",
+            )
             return None
+
+        user_id = payload.get("user_id")
+        if user_id is None:
+            sub = payload.get("sub")
+            if sub is not None and str(sub).isdigit():
+                user_id = int(sub)
+
+        username = payload.get("username") or payload.get("uname") or payload.get("sub", "")
         return {
-            "user_id": int(user_id_str),
-            "username": payload.get("uname", ""),
+            "user_id": user_id,
+            "username": username,
             "role": payload.get("role", "customer"),
         }
     except (JWTError, ValueError, TypeError):

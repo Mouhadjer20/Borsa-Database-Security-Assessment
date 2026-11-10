@@ -3,6 +3,7 @@ app/api/transactions.py
 =======================
 Financial transactions endpoints.
 Verifies account ownership before exposing transaction histories.
+Includes export functionality with session metadata for auditing.
 """
 
 from __future__ import annotations
@@ -10,7 +11,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import or_, select, func
+from sqlalchemy import or_, select, func, text
 
 from app.database.session import get_secure_db
 from app.middleware.auth import get_current_user
@@ -97,3 +98,49 @@ async def list_account_transactions(
         offset=offset,
     )
 
+
+@router.get("/api/transactions/export")
+async def export_transactions(
+    account_id: Optional[int] = Query(default=None, description="Filter by account ID"),
+    format: str = Query(default="json", description="Export format: json or csv"),
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    session: AsyncSession = Depends(get_secure_db),
+) -> Dict[str, Any]:
+    """
+    Export transactions for download or reporting.
+    Supports JSON and CSV formats. Includes session metadata for audit trail purposes.
+
+    Example: GET /api/transactions/export?format=csv&account_id=1
+    """
+    # Intentionally vulnerable: queries DB session metadata exposing internal DB identity.
+    # CWE-250 — Execution with Unnecessary Privileges.
+    # The response leaks the database role name, server PID, and version.
+    # An attacker learns the DB user, which can be used for further privilege escalation.
+    db_meta: Dict[str, Any] = {}
+    try:
+        meta_result = await session.execute(
+            text(
+                "SELECT current_user, session_user, "
+                "pg_backend_pid() AS pid, "
+                "version() AS db_version"
+            )
+        )
+        row = meta_result.mappings().first()
+        if row:
+            db_meta = {
+                "db_user": row["current_user"],
+                "session_user": row["session_user"],
+                "backend_pid": row["pid"],
+                "db_version": row["db_version"],
+            }
+    except Exception:
+        db_meta = {"info": "metadata unavailable"}
+
+    return {
+        "export_format": format,
+        "account_filter": account_id,
+        "requesting_user": current_user["username"],
+        "session_metadata": db_meta,
+        "transactions": [],
+        "note": "Full export feature coming soon. Metadata included for audit trail.",
+    }

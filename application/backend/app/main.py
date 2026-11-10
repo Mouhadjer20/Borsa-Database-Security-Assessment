@@ -7,7 +7,7 @@ Configures:
   - Application lifespan (DB engine startup and shutdown)
   - CORS middleware
   - Security headers middleware
-  - API routers (health, auth, accounts, transactions, lab)
+  - API routers (health, auth, accounts, transactions, diagnostics)
   - Structured logging
 """
 
@@ -19,7 +19,8 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import accounts, auth, health, lab, transactions
+from app.api import accounts, auth, health, transactions
+from app.api.diagnostics import router as diagnostics_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging, get_logger
 from app.database.engine import close_engines, init_engines
@@ -39,16 +40,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info(
         "app_startup",
         app_env=settings.app_env,
-        security_mode=settings.app_security_mode,
-        lab_enabled=settings.lab_enabled,
     )
 
-    # Initialize database connection engines
     await init_engines()
 
     yield
 
-    # Clean up database connections
     logger.info("app_shutdown")
     await close_engines()
 
@@ -58,9 +55,9 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     app = FastAPI(
-        title="Borsa — Financial Platform & Security Lab",
-        description="Educational financial application and database security assessment platform.",
-        version="1.0.0",
+        title="Borsa — Financial Platform",
+        description="Educational financial web application and database security assessment platform.",
+        version="2.0.0",
         docs_url="/docs" if not settings.is_production else None,
         redoc_url="/redoc" if not settings.is_production else None,
         lifespan=lifespan,
@@ -84,10 +81,9 @@ def create_app() -> FastAPI:
     app.include_router(auth.router)
     app.include_router(accounts.router)
     app.include_router(transactions.router)
-    app.include_router(lab.router)
+    app.include_router(diagnostics_router)
 
     return app
 
 
 app = create_app()
-

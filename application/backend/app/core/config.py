@@ -12,18 +12,15 @@ from __future__ import annotations
 
 import secrets
 from functools import lru_cache
-from typing import List, Literal
+from typing import List, Literal, Union
 
-from pydantic import AnyHttpUrl, Field, field_validator, model_validator
+from pydantic import AnyHttpUrl, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """
     Application settings sourced from environment variables / .env file.
-
-    All fields with no default value are REQUIRED; the application will refuse
-    to start when they are absent.
     """
 
     model_config = SettingsConfigDict(
@@ -37,19 +34,18 @@ class Settings(BaseSettings):
     # Application
     # ------------------------------------------------------------------ #
     app_env: Literal["development", "staging", "production"] = "development"
-    app_security_mode: Literal["secure", "vulnerable"] = "secure"
     app_host: str = "0.0.0.0"
     app_port: int = 8000
 
     # ------------------------------------------------------------------ #
-    # Secure-mode database (uses app_readonly / app_writer roles)
+    # Database
     # ------------------------------------------------------------------ #
-    db_host: str = Field(..., description="Hostname/IP of the PostgreSQL server")
+    db_host: str = Field(default="localhost", description="Hostname/IP of the PostgreSQL server")
     db_port: int = 5432
-    db_name: str = Field(..., description="Database name")
-    db_user: str = Field(..., description="DB role for the application (app_readonly or app_writer)")
-    db_password: str = Field(..., description="Password for db_user")
-    db_sslmode: Literal["disable", "allow", "prefer", "require", "verify-ca", "verify-full"] = "require"
+    db_name: str = Field(default="borsa_db", description="Database name")
+    db_user: str = Field(default="app_readonly", description="DB role for the application")
+    db_password: str = Field(default="", description="Password for db_user")
+    db_sslmode: Literal["disable", "allow", "prefer", "require", "verify-ca", "verify-full"] = "prefer"
 
     # ------------------------------------------------------------------ #
     # Session / JWT
@@ -66,7 +62,7 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------ #
     # CORS
     # ------------------------------------------------------------------ #
-    cors_origins: List[AnyHttpUrl] = Field(
+    cors_origins: Union[List[AnyHttpUrl], str] = Field(
         default=["http://localhost:5173"],
         description="Comma-separated list of allowed frontend origins.",
     )
@@ -74,92 +70,31 @@ class Settings(BaseSettings):
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_cors(cls, v: object) -> object:
-        """Allow a comma-separated string in the env file."""
+        """Allow a comma-separated string or JSON array in the env file."""
         if isinstance(v, str):
+            if v.startswith("[") and v.endswith("]"):
+                import json
+                try:
+                    return json.loads(v)
+                except Exception:
+                    pass
             return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
 
     # ------------------------------------------------------------------ #
-    # Vulnerable Lab
-    # ------------------------------------------------------------------ #
-    lab_enabled: bool = False
-    lab_db_host: str | None = None
-    lab_db_port: int = 5432
-    lab_db_name: str | None = None
-    lab_db_user: str | None = None
-    lab_db_password: str | None = None
-
-    # ------------------------------------------------------------------ #
-    # Derived / computed helpers
+    # Computed properties
     # ------------------------------------------------------------------ #
     @property
     def secure_db_url(self) -> str:
-        """Async DSN for the secure-mode engine (psycopg3 driver)."""
+        """Async DSN for the SQLAlchemy engine (psycopg3 driver)."""
         return (
             f"postgresql+psycopg://{self.db_user}:{self.db_password}"
             f"@{self.db_host}:{self.db_port}/{self.db_name}"
         )
 
     @property
-    def lab_db_url(self) -> str:
-        """Async DSN for the lab engine — only valid when lab is enabled."""
-        if not self.lab_enabled:
-            raise RuntimeError("Lab is not enabled; lab_db_url is unavailable.")
-        return (
-            f"postgresql+psycopg://{self.lab_db_user}:{self.lab_db_password}"
-            f"@{self.lab_db_host}:{self.lab_db_port}/{self.lab_db_name}"
-        )
-
-    @property
     def is_production(self) -> bool:
         return self.app_env == "production"
-
-    # ------------------------------------------------------------------ #
-    # Startup validation
-    # ------------------------------------------------------------------ #
-    @model_validator(mode="after")
-    def _validate_lab_config(self) -> "Settings":
-        """
-        Security rule: when LAB_ENABLED=true all lab DB variables must be
-        present.  The app refuses to start rather than silently falling back
-        to the secure DB or running lab experiments against production data.
-        """
-        if self.lab_enabled:
-            missing = [
-                name
-                for name, value in {
-                    "LAB_DB_HOST": self.lab_db_host,
-                    "LAB_DB_NAME": self.lab_db_name,
-                    "LAB_DB_USER": self.lab_db_user,
-                    "LAB_DB_PASSWORD": self.lab_db_password,
-                }.items()
-                if not value
-            ]
-            if missing:
-                raise ValueError(
-                    f"LAB_ENABLED=true but the following required lab variables are missing: "
-                    f"{', '.join(missing)}. "
-                    "The application refuses to start the lab without a fully configured "
-                    "isolated laboratory database."
-                )
-
-        if self.app_security_mode == "vulnerable" and not self.lab_enabled:
-            raise ValueError(
-                "APP_SECURITY_MODE=vulnerable requires LAB_ENABLED=true. "
-                "Vulnerable mode must only run inside the isolated laboratory."
-            )
-
-        return self
-
-    @model_validator(mode="after")
-    def _warn_insecure_session_secret(self) -> "Settings":
-        """Warn loudly when no explicit session secret is set in production."""
-        if self.is_production and len(self.session_secret) < 32:
-            raise ValueError(
-                "SESSION_SECRET must be at least 32 characters in production. "
-                "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
-            )
-        return self
 
 
 @lru_cache(maxsize=1)
