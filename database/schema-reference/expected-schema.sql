@@ -60,9 +60,9 @@ CREATE TABLE IF NOT EXISTS app_users (
 -- 6. security_audit: Application and security event audit trail
 CREATE TABLE IF NOT EXISTS security_audit (
     event_id  BIGSERIAL PRIMARY KEY,
-    actor     VARCHAR(150) NOT NULL,
+    actor     VARCHAR(150) NOT NULL DEFAULT 'system',
     action    VARCHAR(100) NOT NULL,
-    resource  VARCHAR(255) NOT NULL,
+    resource  VARCHAR(255) NOT NULL DEFAULT 'unknown',
     timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

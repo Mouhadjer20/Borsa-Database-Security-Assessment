@@ -215,7 +215,7 @@ sudo -u postgres psql -d "$DB_NAME" -v ON_ERROR_STOP=1 <<SQL
 -- app_writer: read + write on operational tables
 GRANT SELECT, INSERT, UPDATE ON bank_accounts, transactions TO app_writer;
 GRANT SELECT ON customers, app_users, employees, access_policies TO app_writer;
-GRANT INSERT ON security_audit TO app_writer;
+GRANT SELECT, INSERT ON security_audit TO app_writer;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_writer;
 
 -- app_readonly: SELECT only

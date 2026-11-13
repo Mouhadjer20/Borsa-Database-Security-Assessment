@@ -22,7 +22,7 @@ GRANT CONNECT ON DATABASE borsa TO app_writer;
 GRANT USAGE ON SCHEMA public TO app_writer;
 GRANT SELECT, INSERT, UPDATE ON bank_accounts, transactions TO app_writer;
 GRANT SELECT ON customers, app_users TO app_writer;
-GRANT INSERT ON security_audit TO app_writer;
+GRANT SELECT, INSERT ON security_audit TO app_writer;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_writer;
 
 -- 4. app_vulnerable: Deliberately overprivileged identity for isolated Security Lab tests

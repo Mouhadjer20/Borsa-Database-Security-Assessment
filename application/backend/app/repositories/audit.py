@@ -45,23 +45,26 @@ async def log_event(
     Returns the created SecurityAudit instance, or None if the insert failed
     (non-critical — audit failures must NOT block the main request).
     """
+    safe_actor = actor or "anonymous"
+    safe_resource = resource or "unknown"
     try:
-        event = SecurityAudit(
-            actor=actor,
-            action=action,
-            resource=resource,
-            timestamp=datetime.now(timezone.utc),
-        )
-        session.add(event)
-        await session.flush()  # get the generated event_id without a full commit
-        return event
+        async with session.begin_nested():
+            event = SecurityAudit(
+                actor=safe_actor,
+                action=action,
+                resource=safe_resource,
+                timestamp=datetime.now(timezone.utc),
+            )
+            session.add(event)
+            await session.flush()  # get the generated event_id without a full commit
+            return event
     except Exception as exc:  # noqa: BLE001
-        # Audit failures are non-fatal.  Log and continue — the main operation
-        # should not fail because auditing is unavailable.
+        # Audit failures are non-fatal. Savepoint rollback ensures the outer
+        # session transaction is NOT poisoned, preventing PendingRollbackError.
         logger.error(
             "audit_insert_failed",
             action=action,
-            actor=actor,
+            actor=safe_actor,
             error_type=type(exc).__name__,
         )
         return None
