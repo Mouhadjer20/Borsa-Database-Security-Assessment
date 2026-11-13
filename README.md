@@ -229,6 +229,34 @@ Expected: **13 tests passed**
 
 ---
 
+## 🚀 Two-VM Automated Deployment
+
+Automated scripts for deploying the platform across two Linux VMs (VM1 Application Server + VM2 Database Server) are in [`deploy/`](deploy/README.md).
+
+### Step 1: On VM2 (Database Server)
+```bash
+sudo bash deploy/vm2-db-server/setup.sh \
+    --app-ip <VM1_IP> \
+    --db-password YourStrongPassword
+```
+
+### Step 2: On VM1 (Application Server)
+```bash
+sudo bash deploy/vm1-app-server/setup.sh \
+    --db-host <VM2_IP> \
+    --db-pass YourStrongPassword \
+    --frontend-origin http://<VM1_IP>
+```
+
+### Step 3: Verify Health
+```bash
+bash deploy/check.sh <VM1_IP>
+```
+
+For full details, service management, and firewall rules, see [deploy/README.md](deploy/README.md).
+
+---
+
 ## API Reference
 
 ### Authentication

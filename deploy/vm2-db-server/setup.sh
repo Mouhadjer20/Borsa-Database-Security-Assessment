@@ -8,7 +8,7 @@
 # Run as    : sudo bash setup.sh
 # Usage     : sudo bash setup.sh [--app-ip <VM1_IP>] [--db-password <PASS>]
 #
-# Example   : sudo bash setup.sh --app-ip 192.168.1.5 --db-password Secret42!
+# Example   : sudo bash setup.sh --app-ip 192.168.56.101 --db-password Secret42!
 # =============================================================================
 set -euo pipefail
 
@@ -17,10 +17,8 @@ set -euo pipefail
 # --------------------------------------------------------------------------- #
 get_first_ip() {
   if command -v ip >/dev/null 2>&1; then
-    # Linux (iproute2)
     ip -o -f inet addr show 2>/dev/null | awk '/scope global/ {print $4; exit}' | cut -d/ -f1
   elif command -v ifconfig >/dev/null 2>&1; then
-    # macOS / BSD
     ifconfig 2>/dev/null | awk '/inet / && $2 !~ /^127\./ {gsub(/addr:/,"",$2); print $2; exit}'
   else
     python3 -c "import socket; print(socket.gethostbyname(socket.gethostname()))" 2>/dev/null || true
@@ -30,7 +28,7 @@ get_first_ip() {
 # --------------------------------------------------------------------------- #
 # Configurable defaults (override via CLI flags)
 # --------------------------------------------------------------------------- #
-APP_IP="192.168.1.5"       # IP of VM1 (App Server) — allow pg connections
+APP_IP="192.168.56.101"       # IP of VM1 (App Server) — allow pg connections
 DB_NAME="borsa_db"
 DB_OWNER_PASS="BorsaOwner$(openssl rand -hex 6)"
 DB_WRITER_PASS="BorsaWriter$(openssl rand -hex 6)"
@@ -69,7 +67,20 @@ die()     { echo -e "${RED}[FAIL]${NC} $*" >&2; exit 1; }
 info "=== BorsaTrust — VM2 Database Server Setup ==="
 info "App Server IP : $APP_IP"
 info "Database name : $DB_NAME"
-echo
+
+# Network sanity warning for VirtualBox default NAT
+if [[ "$APP_IP" == "10.0.2.15" ]]; then
+  echo
+  warn "------------------------------------------------------------------------"
+  warn "WARNING: 10.0.2.15 is VirtualBox's default isolated NAT IP."
+  warn "Under default 'NAT' adapter, VMs CANNOT reach each other on 10.0.2.15!"
+  warn "For two VMs to communicate in VirtualBox, you should configure either:"
+  warn "  1) 'Host-Only Adapter' (recommended, e.g. 192.168.56.x)"
+  warn "  2) 'Internal Network' or 'NAT Network' (with custom IPs)"
+  warn "  3) 'Bridged Adapter' (receives an IP from your home/LAN router)"
+  warn "------------------------------------------------------------------------"
+  echo
+fi
 
 # --------------------------------------------------------------------------- #
 # 1. System packages
@@ -77,57 +88,78 @@ echo
 info "Updating package lists…"
 apt-get update -qq
 
-info "Installing PostgreSQL 16…"
+info "Installing PostgreSQL…"
 apt-get install -y -qq postgresql postgresql-contrib curl ca-certificates ufw
 
-PG_VERSION=$(pg_lsclusters | awk 'NR==2{print $1}')
-PG_CONF_DIR="/etc/postgresql/${PG_VERSION}/main"
-info "Detected PostgreSQL version: $PG_VERSION"
+# Ensure PostgreSQL service is started
+systemctl enable postgresql
+systemctl start postgresql
 
 # --------------------------------------------------------------------------- #
-# 2. Configure PostgreSQL to listen on all interfaces
+# 2. Locate PostgreSQL configuration files dynamically
+# --------------------------------------------------------------------------- #
+PG_CONF=$(sudo -u postgres psql -t -P format=unaligned -c "SHOW config_file;" 2>/dev/null || true)
+PG_HBA=$(sudo -u postgres psql -t -P format=unaligned -c "SHOW hba_file;" 2>/dev/null || true)
+
+if [[ -z "$PG_CONF" || ! -f "$PG_CONF" ]]; then
+  PG_VERSION=$(pg_lsclusters -h 2>/dev/null | awk '{print $1; exit}' || echo "16")
+  PG_CONF="/etc/postgresql/${PG_VERSION}/main/postgresql.conf"
+  PG_HBA="/etc/postgresql/${PG_VERSION}/main/pg_hba.conf"
+fi
+
+info "Config file : $PG_CONF"
+info "HBA file    : $PG_HBA"
+
+# --------------------------------------------------------------------------- #
+# 3. Configure postgresql.conf (listen_addresses = '*')
 # --------------------------------------------------------------------------- #
 info "Configuring postgresql.conf (listen_addresses)…"
-sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" "$PG_CONF_DIR/postgresql.conf"
+if grep -E "^[#]?[ \t]*listen_addresses" "$PG_CONF" >/dev/null 2>&1; then
+  sed -i -E "s/^[#]?[ \t]*listen_addresses[ \t]*=.*/listen_addresses = '*'/" "$PG_CONF"
+else
+  echo "listen_addresses = '*'" >> "$PG_CONF"
+fi
+success "postgresql.conf configured to listen on all interfaces"
 
 # --------------------------------------------------------------------------- #
-# 3. Configure pg_hba.conf — allow app server connections
+# 4. Configure pg_hba.conf — allow app server connections
 # --------------------------------------------------------------------------- #
 info "Configuring pg_hba.conf for VM1 ($APP_IP)…"
-PG_HBA="$PG_CONF_DIR/pg_hba.conf"
 
-# Remove any existing borsa entries to avoid duplicates
-grep -v "# borsa-ctf" "$PG_HBA" > /tmp/pg_hba_clean.conf || true
-cp /tmp/pg_hba_clean.conf "$PG_HBA"
+# Determine CIDR (don't append /32 if user already specified a subnet)
+APP_CIDR="$APP_IP"
+[[ "$APP_CIDR" =~ / ]] || APP_CIDR="${APP_IP}/32"
+
+# Remove any previously added block to make the script safely idempotent
+sed -i '/### BEGIN BORSA-CTF ###/,/### END BORSA-CTF ###/d' "$PG_HBA"
 
 cat >> "$PG_HBA" <<EOF
-
-# borsa-ctf — allow app server roles to connect
-host    $DB_NAME    app_writer    $APP_IP/32    scram-sha-256
-host    $DB_NAME    app_readonly  $APP_IP/32    scram-sha-256
-# borsa-ctf — allow local superuser (for DBA tasks)
-local   all         postgres                    peer
+### BEGIN BORSA-CTF ###
+# Allow Borsa application server roles from $APP_CIDR
+host    $DB_NAME    app_writer    $APP_CIDR    scram-sha-256
+host    $DB_NAME    app_readonly  $APP_CIDR    scram-sha-256
+### END BORSA-CTF ###
 EOF
 
-success "pg_hba.conf updated"
+success "pg_hba.conf updated cleanly"
 
 # --------------------------------------------------------------------------- #
-# 4. Start / restart PostgreSQL
+# 5. Restart PostgreSQL to apply network & auth changes
 # --------------------------------------------------------------------------- #
 info "Restarting PostgreSQL service…"
-systemctl enable postgresql
 systemctl restart postgresql
 sleep 2
-success "PostgreSQL running"
+systemctl is-active --quiet postgresql || die "PostgreSQL failed to restart — check /var/log/postgresql/"
+success "PostgreSQL is running"
 
 # --------------------------------------------------------------------------- #
-# 5. Create database and roles
+# 6. Create database and roles
 # --------------------------------------------------------------------------- #
 info "Creating database '$DB_NAME' and roles…"
 
 sudo -u postgres psql -v ON_ERROR_STOP=1 <<SQL
 
--- Create database
+-- Create database if not exists
 SELECT 'CREATE DATABASE $DB_NAME' WHERE NOT EXISTS (
   SELECT FROM pg_database WHERE datname = '$DB_NAME'
 ) \gexec
@@ -165,15 +197,17 @@ SQL
 success "Database and roles created"
 
 # --------------------------------------------------------------------------- #
-# 6. Run schema SQL
+# 7. Run schema SQL (Piped via stdin to avoid permission denied on /home paths)
 # --------------------------------------------------------------------------- #
+SCHEMA_FILE="$PROJECT_ROOT/database/schema-reference/expected-schema.sql"
+[[ -f "$SCHEMA_FILE" ]] || die "Schema file not found at: $SCHEMA_FILE"
+
 info "Applying schema…"
-sudo -u postgres psql -d "$DB_NAME" -v ON_ERROR_STOP=1 \
-  -f "$PROJECT_ROOT/database/schema-reference/expected-schema.sql"
-success "Schema applied"
+cat "$SCHEMA_FILE" | sudo -u postgres psql -d "$DB_NAME" -v ON_ERROR_STOP=1
+success "Schema applied successfully"
 
 # --------------------------------------------------------------------------- #
-# 7. Grant privileges to roles (post-schema, so tables exist)
+# 8. Grant privileges to roles (tables now exist)
 # --------------------------------------------------------------------------- #
 info "Granting table privileges…"
 sudo -u postgres psql -d "$DB_NAME" -v ON_ERROR_STOP=1 <<SQL
@@ -195,46 +229,53 @@ SQL
 success "Privileges granted"
 
 # --------------------------------------------------------------------------- #
-# 8. Seed data
+# 9. Seed data (Piped via stdin to avoid permission denied on /home paths)
 # --------------------------------------------------------------------------- #
 if [[ "$SEED_DATA" == "YES" ]]; then
+  SEED_FILE="$PROJECT_ROOT/database/seed-data.sql"
+  [[ -f "$SEED_FILE" ]] || die "Seed file not found at: $SEED_FILE"
+
   info "Seeding development data…"
-  sudo -u postgres psql -d "$DB_NAME" -v ON_ERROR_STOP=1 \
-    -f "$PROJECT_ROOT/database/seed-data.sql"
+  # Reset any existing rows before seeding to avoid duplicates on re-run
+  sudo -u postgres psql -d "$DB_NAME" -v ON_ERROR_STOP=1 -c "
+    TRUNCATE security_audit, transactions, bank_accounts, customers, app_users RESTART IDENTITY CASCADE;
+  "
+  cat "$SEED_FILE" | sudo -u postgres psql -d "$DB_NAME" -v ON_ERROR_STOP=1
   success "Seed data inserted"
 else
   warn "Skipping seed data (--no-seed)"
 fi
 
 # --------------------------------------------------------------------------- #
-# 9. UFW firewall — open PostgreSQL port only to App Server
+# 10. UFW firewall — open PostgreSQL port only to App Server
 # --------------------------------------------------------------------------- #
 info "Configuring firewall (UFW)…"
-ufw --force enable
-ufw allow ssh
-ufw allow from "$APP_IP" to any port 5432 proto tcp
-ufw reload
-success "Firewall configured — PostgreSQL open only to $APP_IP"
+if command -v ufw >/dev/null 2>&1; then
+  ufw --force enable || true
+  ufw allow ssh || true
+  ufw allow from "$APP_IP" to any port 5432 proto tcp || true
+  ufw reload || true
+  success "Firewall configured — PostgreSQL open only to $APP_IP"
+else
+  warn "UFW not found, skipping firewall configuration"
+fi
 
 # --------------------------------------------------------------------------- #
-# 10. Write credentials file for VM1 handoff
+# 11. Write credentials file for VM1 handoff
 # --------------------------------------------------------------------------- #
 CREDS_FILE="$SCRIPT_DIR/db-credentials.txt"
+MY_IP="$(get_first_ip)"
 cat > "$CREDS_FILE" <<EOF
 # ======================================================
-# BorsaTrust — DB Credentials (copy to VM1 .env)
+# BorsaTrust — DB Credentials (copy to VM1 setup)
 # Generated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
 # ======================================================
-DB_HOST=<VM2_IP>          # Replace with this VM's IP
+DB_HOST=$MY_IP
 DB_PORT=5432
 DB_NAME=$DB_NAME
 DB_USER=app_writer
 DB_PASSWORD=$DB_WRITER_PASS
 DB_SSLMODE=prefer
-
-# Read-only role (optional, for future read-replica use):
-# DB_USER=app_readonly
-# DB_PASSWORD=$DB_READONLY_PASS
 EOF
 chmod 600 "$CREDS_FILE"
 
@@ -248,12 +289,15 @@ echo -e "${GREEN}============================================================${N
 echo
 echo "  Database : $DB_NAME"
 echo "  Port     : 5432"
-echo "  Roles    : app_writer / app_readonly"
+echo "  User     : app_writer"
+echo "  Password : $DB_WRITER_PASS"
+echo "  Host IP  : $MY_IP"
 echo
-echo -e "${YELLOW}  Next steps:${NC}"
-echo "  1. Note this VM's IP: $(get_first_ip)"
-echo "  2. Credentials saved to: $CREDS_FILE"
-echo "  3. Copy DB_HOST, DB_PASSWORD to VM1's .env"
-echo "  4. Run vm1-app-server/setup.sh on VM1"
+echo -e "${YELLOW}  Credentials saved to:${NC} $CREDS_FILE"
 echo
-
+echo -e "${YELLOW}  Next step on VM1 (App Server):${NC}"
+echo "    sudo bash deploy/vm1-app-server/setup.sh \\"
+echo "        --db-host $MY_IP \\"
+echo "        --db-pass $DB_WRITER_PASS \\"
+echo "        --frontend-origin http://<VM1_IP>"
+echo

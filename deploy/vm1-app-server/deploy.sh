@@ -47,6 +47,7 @@ success "Python deps updated"
 info "Rebuilding frontend…"
 npm --prefix "$APP_DIR/application/frontend" install --silent
 VITE_API_BASE_URL="" npm --prefix "$APP_DIR/application/frontend" run build
+chown -R borsa:borsa "$APP_DIR"
 success "Frontend rebuilt"
 
 # 4. Restart backend
