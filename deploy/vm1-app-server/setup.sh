@@ -115,15 +115,64 @@ apt-get install -y -qq \
   build-essential libpq-dev \
   nginx curl ca-certificates gnupg ufw git rsync
 
-# Install python3 packages (portable across Ubuntu 22.04 with 3.10/3.11 and 24.04 with 3.12)
+# ---------------------------------------------------------------------------
+# Install Python — prefer a version with pre-built wheels (3.11 / 3.12 / 3.13).
+# Python 3.14+ is excluded from the preferred list: most packages do not yet
+# ship binary wheels for it, causing CRC / download failures during pip install.
+# ---------------------------------------------------------------------------
 info "Installing Python runtime…"
-if apt-cache show python3.11-venv >/dev/null 2>&1; then
-  apt-get install -y -qq python3.11 python3.11-venv python3.11-dev python3-pip
-  PY_BIN="python3.11"
-else
-  apt-get install -y -qq python3 python3-venv python3-dev python3-pip
+
+# Install available stable Python versions from apt
+apt-get install -y -qq \
+  python3-pip python3-venv python3-dev \
+  python3.13 python3.13-venv python3.13-dev 2>/dev/null || true
+apt-get install -y -qq \
+  python3.12 python3.12-venv python3.12-dev 2>/dev/null || true
+apt-get install -y -qq \
+  python3.11 python3.11-venv python3.11-dev 2>/dev/null || true
+
+# Also install deadsnakes PPA for older Pythons if needed
+# (Ubuntu 25.x ships with Python 3.14 as default which lacks many binary wheels)
+install_deadsnakes() {
+  if ! grep -r "deadsnakes" /etc/apt/sources.list.d/ >/dev/null 2>&1; then
+    apt-get install -y -qq software-properties-common
+    add-apt-repository -y ppa:deadsnakes/ppa
+    apt-get update -qq
+  fi
+}
+
+# Pick the best available Python: 3.12 > 3.11 > 3.13 > system python3
+# 3.14+ is intentionally last — many packages lack binary wheels
+PY_BIN=""
+for PY_TRY in python3.12 python3.11 python3.13 python3; do
+  if command -v "$PY_TRY" >/dev/null 2>&1; then
+    PY_MINOR=$("$PY_TRY" -c "import sys; print(sys.version_info.minor)" 2>/dev/null || echo "0")
+    PY_MAJOR=$("$PY_TRY" -c "import sys; print(sys.version_info.major)" 2>/dev/null || echo "0")
+    if [[ "$PY_MAJOR" -eq 3 && "$PY_MINOR" -ge 14 ]]; then
+      warn "Skipping $PY_TRY (Python 3.$PY_MINOR): binary wheels missing for many packages"
+      continue
+    fi
+    PY_BIN="$PY_TRY"
+    break
+  fi
+done
+
+# If no preferred Python found, fall back to system python3 (even if 3.14)
+if [[ -z "$PY_BIN" ]]; then
   PY_BIN="python3"
+  PY_MINOR=$("$PY_BIN" -c "import sys; print(sys.version_info.minor)" 2>/dev/null || echo "0")
+  if [[ "$PY_MINOR" -ge 14 ]]; then
+    warn "============================================================"
+    warn "NOTICE: Only Python 3.$PY_MINOR is available on this system."
+    warn "Python 3.14+ is not yet fully supported by the dependency"
+    warn "ecosystem. Installing python3.12 from deadsnakes PPA..."
+    warn "============================================================"
+    install_deadsnakes
+    apt-get install -y -qq python3.12 python3.12-venv python3.12-dev
+    PY_BIN="python3.12"
+  fi
 fi
+
 info "Using Python: $($PY_BIN --version)"
 
 # --------------------------------------------------------------------------- #
@@ -160,10 +209,16 @@ rsync -a --delete \
 # --------------------------------------------------------------------------- #
 info "Creating Python virtual environment…"
 "$PY_BIN" -m venv "$APP_DIR/.venv"
-"$APP_DIR/.venv/bin/pip" install --quiet --upgrade pip wheel
+"$APP_DIR/.venv/bin/pip" install --upgrade pip wheel setuptools
 
-info "Installing Python dependencies…"
-"$APP_DIR/.venv/bin/pip" install --quiet \
+# Purge any corrupted pip wheel cache (prevents BadZipFile / Bad CRC-32 errors)
+# that can occur when downloads are interrupted on a fresh VM
+"$APP_DIR/.venv/bin/pip" cache purge 2>/dev/null || true
+
+info "Installing Python dependencies (--no-cache-dir to avoid CRC corruption)…"
+"$APP_DIR/.venv/bin/pip" install \
+  --no-cache-dir \
+  --retries 5 \
   -r "$APP_DIR/application/backend/requirements.txt"
 success "Python dependencies installed"
 

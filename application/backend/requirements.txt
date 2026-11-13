@@ -1,5 +1,9 @@
 # Borsa Backend — Python Dependencies
 # Install with: pip install -r requirements.txt
+#
+# Supported Python: 3.11, 3.12, 3.13
+# Python 3.14+ is not yet fully supported by the binary wheel ecosystem
+# (cryptography, psycopg-binary). The deploy script enforces this automatically.
 
 # Web framework
 fastapi>=0.115.0
@@ -11,15 +15,23 @@ pydantic-settings>=2.6.0
 
 # Database (async SQLAlchemy + psycopg3)
 sqlalchemy[asyncio]>=2.0.36
-psycopg[binary,pool]>=3.2.3,<4.0.0
+psycopg[binary,pool]>=3.2.10,<4.0.0
 
 # File upload support (multipart forms)
 python-multipart>=0.0.17
 
 # JWT authentication
+# python-jose pulls in cryptography; pin cryptography explicitly so pip
+# resolves a binary wheel rather than attempting a Rust source build
 python-jose[cryptography]>=3.3.0
+cryptography>=41.0.0,<45.0.0
 
 # Password hashing
+# bcrypt pinned directly because passlib 1.7.4 uses it internally;
+# passlib's crypt-module fallback was removed in Python 3.13 but the
+# bcrypt backend is unaffected (shim in app/core/security.py handles
+# the remaining bcrypt>=4.0.0 API incompatibility)
+bcrypt>=4.0.0,<6.0.0
 passlib[bcrypt]>=1.7.4
 
 # Environment variable loading

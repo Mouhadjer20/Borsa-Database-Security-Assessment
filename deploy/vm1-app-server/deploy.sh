@@ -37,9 +37,13 @@ rsync -a --delete \
 chown -R borsa:borsa "$APP_DIR"
 success "Source synced"
 
-# 2. Update Python dependencies
+# 2. Update Python dependencies (--no-cache-dir prevents Bad CRC-32 corruption)
 info "Updating Python dependencies…"
-"$APP_DIR/.venv/bin/pip" install --quiet --upgrade \
+"$APP_DIR/.venv/bin/pip" cache purge 2>/dev/null || true
+"$APP_DIR/.venv/bin/pip" install \
+  --no-cache-dir \
+  --retries 5 \
+  --upgrade \
   -r "$APP_DIR/application/backend/requirements.txt"
 success "Python deps updated"
 
