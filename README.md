@@ -1,5 +1,7 @@
 # Borsa — Financial Platform & Database Security CTF
 
+[![CI — BorsaTrust Backend & Frontend](https://github.com/Mouhadjer20/Borsa-Database-Security-Assessment/actions/workflows/ci.yml/badge.svg)](https://github.com/Mouhadjer20/Borsa-Database-Security-Assessment/actions/workflows/ci.yml)
+
 > **⚠️ IMPORTANT:** This project is exclusively for educational purposes and authorized security testing within an isolated virtual laboratory using synthetic financial data. Never deploy against real systems or databases.
 
 ## Overview
@@ -231,29 +233,62 @@ Expected: **13 tests passed**
 
 ## 🚀 Two-VM Automated Deployment
 
-Automated scripts for deploying the platform across two Linux VMs (VM1 Application Server + VM2 Database Server) are in [`deploy/`](deploy/README.md).
+Automated scripts for deploying the platform across two Linux VMs (**VM1 Application Server** + **VM2 Database Server**) are located under [`deploy/`](deploy/README.md).
 
-### Step 1: On VM2 (Database Server)
+### Recommended VirtualBox Network Topology
+- **VM2 (Database Server):** `192.168.56.2` (PostgreSQL 16, firewall restricted to VM1)
+- **VM1 (Application Server):** `192.168.56.3` (FastAPI backend + Nginx + React SPA on port 80)
+- **Network Mode:** VirtualBox **Host-Only Adapter** (Adapter 2 on both VMs, e.g. `vboxnet0`)
+
+### Step 1: On VM2 (Database Server — 192.168.56.2)
 ```bash
+cd BorsaTrust-Database-Security-Assessment
+git pull origin main
+
 sudo bash deploy/vm2-db-server/setup.sh \
-    --app-ip <VM1_IP> \
-    --db-password YourStrongPassword
+    --app-ip 192.168.56.3 \
+    --db-password aissa123
 ```
 
-### Step 2: On VM1 (Application Server)
+### Step 2: On VM1 (Application Server — 192.168.56.3)
 ```bash
+cd BorsaTrust-Database-Security-Assessment
+git pull origin main
+
 sudo bash deploy/vm1-app-server/setup.sh \
-    --db-host <VM2_IP> \
-    --db-pass YourStrongPassword \
-    --frontend-origin http://<VM1_IP>
+    --db-host 192.168.56.2 \
+    --db-pass aissa123 \
+    --frontend-origin http://192.168.56.3
 ```
 
-### Step 3: Verify Health
+### Step 3: Verify Deployment & Connectivity
+Run the automated test suite from your host machine or audit VM:
 ```bash
-bash deploy/check.sh <VM1_IP>
+bash deploy/check.sh 192.168.56.3
 ```
 
-For full details, service management, and firewall rules, see [deploy/README.md](deploy/README.md).
+Verify authentication and audit persistence:
+```bash
+# Test login via API
+curl -i -X POST http://192.168.56.3/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"bob","password":"bob1234"}'
+
+# Verify audit trail on VM2
+sudo -u postgres psql -d borsa_db -c "SELECT event_id, actor, action, resource, timestamp FROM security_audit ORDER BY timestamp DESC LIMIT 3;"
+```
+
+### Seeded Test Credentials
+
+| Username | Password | Role | Customer Profile | Checking Balance |
+| :--- | :--- | :--- | :--- | :--- |
+| `alice` | `alice1234` | customer | Alice Nguyen | $12,450.00 |
+| `bob` | `bob1234` | customer | Bob Markov | $5,700.00 |
+| `charlie` | `charlie1234` | customer | Charlie Durand | $22,100.00 |
+| `diana` | `diana1234` | customer | Diana Prince | $3,300.00 |
+| `admin` | `adminpass1` | admin | Administrator | System Admin |
+
+For full deployment documentation, service commands, and troubleshooting guides, see [deploy/README.md](deploy/README.md).
 
 ---
 
