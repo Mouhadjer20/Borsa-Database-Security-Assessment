@@ -26,19 +26,19 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: pip
-          cache-dependency-path: application/backend/requirements.txt
 
       - name: Upgrade pip & install build tools
         run: |
           python -m pip install --upgrade pip wheel setuptools
 
-      - name: Install backend dependencies (no cache to avoid CRC errors)
+      - name: Install backend dependencies
         run: |
           pip install --no-cache-dir -r application/backend/requirements.txt
 
       - name: Run pytest
         working-directory: application/backend
+        env:
+          PYTHONPATH: .
         run: |
           python -m pytest -v --tb=short
 
@@ -54,14 +54,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
-          cache-dependency-path: application/backend/requirements.txt
 
       - name: Install dependencies
         run: pip install --no-cache-dir -r application/backend/requirements.txt
 
       - name: Verify app module imports cleanly
         working-directory: application/backend
+        env:
+          PYTHONPATH: .
         run: |
           python -c "from app.main import app; print('App imports OK')"
           python -c "from app.core.config import get_settings; s=get_settings(); print('Settings OK')"
@@ -95,12 +95,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: npm
-          cache-dependency-path: application/frontend/package-lock.json
 
       - name: Install frontend dependencies
         working-directory: application/frontend
-        run: npm ci
+        run: npm install
 
       - name: Build frontend (Vite)
         working-directory: application/frontend

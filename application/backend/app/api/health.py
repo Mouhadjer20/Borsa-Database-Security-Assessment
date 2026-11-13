@@ -32,7 +32,7 @@ async def health_check() -> Dict[str, Any]:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
             db_status = "healthy"
-    except (RuntimeError, SQLAlchemyError):
+    except Exception:
         db_status = "unavailable"
 
     return {

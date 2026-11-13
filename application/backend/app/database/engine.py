@@ -112,7 +112,7 @@ async def _ping_engine(engine: AsyncEngine, label: str) -> None:
             error_type=type(exc).__name__,
             detail="Connection refused or credentials incorrect — check .env",
         )
-    except SQLAlchemyError as exc:
+    except Exception as exc:
         logger.error("db_ping_failure", pool=label, error_type=type(exc).__name__)
 
 
