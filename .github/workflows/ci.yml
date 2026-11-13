@@ -40,7 +40,13 @@ jobs:
         env:
           PYTHONPATH: .
         run: |
-          python -m pytest -v --tb=short
+          python -m pytest -v --tb=short 2>&1 | tee /tmp/pytest_out.txt || {
+            echo "## ❌ Pytest Failure Output" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat /tmp/pytest_out.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          }
 
   # =========================================================================
   # 2. Backend — code quality (import check, no broken imports)
@@ -65,7 +71,7 @@ jobs:
         run: |
           python -c "from app.main import app; print('App imports OK')"
           python -c "from app.core.config import get_settings; s=get_settings(); print('Settings OK')"
-          python -c "from app.core.security import hash_password, verify_password; print('Security OK')"
+          python -c "from app.core.security import hash_password, verify_password; h=hash_password('test'); assert verify_password('test', h); print('Security & Bcrypt OK')"
 
       - name: Check no lab module remains
         working-directory: application/backend
@@ -98,7 +104,7 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: application/frontend
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build frontend (Vite)
         working-directory: application/frontend

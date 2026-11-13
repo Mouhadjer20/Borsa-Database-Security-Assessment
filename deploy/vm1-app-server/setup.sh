@@ -261,7 +261,7 @@ success ".env written"
 # 6. Build the React frontend
 # --------------------------------------------------------------------------- #
 info "Installing frontend Node.js dependencies…"
-npm --prefix "$APP_DIR/application/frontend" install --silent
+npm --prefix "$APP_DIR/application/frontend" install --silent --legacy-peer-deps
 
 info "Building frontend (Vite)…"
 VITE_API_BASE_URL="" npm --prefix "$APP_DIR/application/frontend" run build

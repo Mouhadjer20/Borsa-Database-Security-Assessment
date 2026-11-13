@@ -49,7 +49,7 @@ success "Python deps updated"
 
 # 3. Rebuild frontend
 info "Rebuilding frontend…"
-npm --prefix "$APP_DIR/application/frontend" install --silent
+npm --prefix "$APP_DIR/application/frontend" install --silent --legacy-peer-deps
 VITE_API_BASE_URL="" npm --prefix "$APP_DIR/application/frontend" run build
 chown -R borsa:borsa "$APP_DIR"
 success "Frontend rebuilt"
