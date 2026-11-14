@@ -32,7 +32,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick stats row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <StatCard
           label="Active Accounts"
           value={accountsLoading ? '—' : normalizedAccounts.length}
@@ -42,12 +42,6 @@ export default function DashboardPage() {
           label="Recent Activities"
           value={txLoading ? '—' : transactions.length}
           helperText="Latest logged transactions"
-        />
-        <StatCard
-          label="Security Status"
-          value="ENFORCED"
-          valueColor="text-green-400"
-          helperText="Server-side authorization active"
         />
       </div>
 

@@ -53,19 +53,6 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
-
-      {/* Network & Infrastructure Overview */}
-      <div className="card p-6 bg-gray-900 border border-gray-800 rounded-xl space-y-4">
-        <h3 className="text-base font-semibold text-gray-200 border-b border-gray-800 pb-3">
-          VirtualBox Laboratory Architecture
-        </h3>
-        <div className="text-xs font-mono text-gray-400 space-y-2">
-          <p><strong className="text-gray-300">VM1 (Kali Linux):</strong> 192.168.100.10 (AUDIT-NET)</p>
-          <p><strong className="text-gray-300">VM2 (App Server):</strong> 192.168.100.20 (AUDIT-NET) & 192.168.200.20 (DB-NET)</p>
-          <p><strong className="text-gray-300">VM3 (Database Server):</strong> 192.168.200.30 (DB-NET only)</p>
-        </div>
-      </div>
     </div>
   );
 }
-

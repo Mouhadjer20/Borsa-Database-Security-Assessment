@@ -52,12 +52,21 @@ function statusVariant(status) {
 export default function TransactionRow({ transaction, currentAccountId }) {
   if (!transaction) return null;
 
+  // Support both backend field names:
+  //   transaction_id / id
+  //   timestamp / created_at
+  //   source_account / from_account_id
+  //   destination_account / to_account_id
   const {
-    id,
-    created_at,
+    transaction_id,
+    id = transaction_id,
+    timestamp,
+    created_at = timestamp,
     description,
-    from_account_id,
-    to_account_id,
+    source_account,
+    destination_account,
+    from_account_id = source_account,
+    to_account_id   = destination_account,
     amount = 0,
     direction,
     currency = 'USD',
@@ -79,15 +88,27 @@ export default function TransactionRow({ transaction, currentAccountId }) {
   const amountClass = isCredit ? 'text-green-400' : 'text-red-400';
   const amountSign  = isCredit ? '+' : '−';
 
-  // Counterparty label
+  // Counterparty / description label
+  // The DB has no free-text description — build a readable label from account IDs.
   let counterparty = description;
   if (!counterparty) {
+    const src  = from_account_id  ?? source_account  ?? null;
+    const dest = to_account_id    ?? destination_account ?? null;
     if (currentAccountId) {
       counterparty = isCredit
-        ? `From: ${from_account_id ?? '—'}`
-        : `To: ${to_account_id ?? '—'}`;
+        ? `From account #${src ?? '—'}`
+        : `To account #${dest ?? '—'}`;
     } else {
-      counterparty = `${from_account_id ?? '?'} → ${to_account_id ?? '?'}`;
+      const typeLabel = transaction_type
+        ? transaction_type.charAt(0).toUpperCase() + transaction_type.slice(1)
+        : 'Transfer';
+      counterparty = src && dest
+        ? `${typeLabel} · #${src} → #${dest}`
+        : src
+          ? `From account #${src}`
+          : dest
+            ? `To account #${dest}`
+            : typeLabel;
     }
   }
 

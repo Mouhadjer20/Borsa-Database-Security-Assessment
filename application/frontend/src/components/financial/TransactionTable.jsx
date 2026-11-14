@@ -69,7 +69,7 @@ export default function TransactionTable({
             <tbody>
               {transactions.map((tx) => (
                 <TransactionRow
-                  key={tx.id ?? tx.transaction_id ?? Math.random()}
+                  key={tx.transaction_id ?? tx.id ?? Math.random()}
                   transaction={tx}
                   currentAccountId={currentAccountId}
                 />
